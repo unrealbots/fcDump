@@ -26,7 +26,7 @@ final class ViewController: UIViewController {
     let faceLandmarks = VNDetectFaceLandmarksRequest()
     let faceLandmarksDetectionRequest = VNSequenceRequestHandler()
     let faceDetectionRequest = VNSequenceRequestHandler()
-
+    
     lazy var previewLayer: AVCaptureVideoPreviewLayer? = {
         guard let session = self.session else { return nil }
         
@@ -43,7 +43,7 @@ final class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-
+        
         sessionPrepare()
         session?.startRunning()
     }
@@ -116,11 +116,11 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
         
         let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
         
-        let attachments = CMCopyDictionaryOfAttachments(kCFAllocatorDefault, sampleBuffer, kCMAttachmentMode_ShouldPropagate)
-        let ciImage = CIImage(cvImageBuffer: pixelBuffer!, options: attachments as! [String : Any]?)
+        let attachments = CMCopyDictionaryOfAttachments(allocator: kCFAllocatorDefault, target: sampleBuffer, attachmentMode: kCMAttachmentMode_ShouldPropagate)
+        let ciImage = CIImage(cvImageBuffer: pixelBuffer!, options: attachments as! [CIImageOption : Any]?)
         
         //leftMirrored for front camera
-        let ciImageWithOrientation = ciImage.oriented(forExifOrientation: Int32(UIImageOrientation.leftMirrored.rawValue))
+        let ciImageWithOrientation = ciImage.oriented(forExifOrientation: Int32(UIImage.Orientation.leftMirrored.rawValue))
         
         detectFace(on: ciImageWithOrientation)
     }
@@ -166,57 +166,59 @@ extension ViewController {
                     if let boundingBox = self.faceLandmarks.inputFaceObservations?.first?.boundingBox {
                         let faceBoundingBox = boundingBox.scaled(to: self.view.bounds.size)
                         
-                        //different types of landmarks
-//                        let faceContour = observation.landmarks?.faceContour
-//                        self.convertPointsForFace(faceContour, faceBoundingBox)
-//
-//                        let leftEye = observation.landmarks?.leftEye
-//                        self.convertPointsForFace(leftEye, faceBoundingBox)
-
-//                        let rightEye = observation.landmarks?.rightEye
-//                        self.convertPointsForFace(rightEye, faceBoundingBox)
-//
+                        /*
+                         let faceContour = observation.landmarks?.faceContour
+                         self.convertPointsForFace(faceContour, faceBoundingBox)
+                         
+                         let leftEye = observation.landmarks?.leftEye
+                         self.convertPointsForFace(leftEye, faceBoundingBox)
+                         
+                         let rightEye = observation.landmarks?.rightEye
+                         self.convertPointsForFace(rightEye, faceBoundingBox)
+                         */
+                        
                         let nose = observation.landmarks?.medianLine
                         self.convertPointsForFace(nose, faceBoundingBox, type: "nose")
-//
-
+                        
                         let leftEyebrow = observation.landmarks?.leftEyebrow
                         self.convertPointsForFace(leftEyebrow, faceBoundingBox, type: "rightEar")
-//
+                        
                         let rightEyebrow = observation.landmarks?.rightEyebrow
                         self.convertPointsForFace(rightEyebrow, faceBoundingBox, type: "leftEar")
-//
-//                        let noseCrest = observation.landmarks?.noseCrest
-//                        self.convertPointsForFace(noseCrest, faceBoundingBox)
-//
-//                        let outerLips = observation.landmarks?.outerLips
-//                        self.convertPointsForFace(outerLips, faceBoundingBox)
+                        
+                        /*
+                         let noseCrest = observation.landmarks?.noseCrest
+                         self.convertPointsForFace(noseCrest, faceBoundingBox)
+                         
+                         let outerLips = observation.landmarks?.outerLips
+                         self.convertPointsForFace(outerLips, faceBoundingBox)
+                        */
+                        
                     }
                 }
             }
         }
     }
-
+    
     func convertPointsForFace(_ landmark: VNFaceLandmarkRegion2D?, _ boundingBox: CGRect, type: String) {
         if let points = landmark?.normalizedPoints {
             let convertedPoints = convert(points)
-
+            
             /* UIImageView Bat
-            filterView!.subviews.forEach{
-                $0.removeFromSuperview()
-            }
-            let imageview = UIImageView(frame: boundingBox)
-            imageview.image = #imageLiteral(resourceName: "bat")
-            filterView!.addSubview(imageview)
-            */
- 
+             filterView!.subviews.forEach{
+             $0.removeFromSuperview()
+             }
+             let imageview = UIImageView(frame: boundingBox)
+             imageview.image = #imageLiteral(resourceName: "bat")
+             filterView!.addSubview(imageview)
+             */
+            
             let faceLandmarkPoints = convertedPoints.map { (point: (x: CGFloat, y: CGFloat)) -> (x: CGFloat, y: CGFloat) in
                 let pointX = point.x * boundingBox.width + boundingBox.origin.x
                 let pointY = point.y * boundingBox.height + boundingBox.origin.y
-                
                 return (x: pointX, y: pointY)
             }
-
+            
             DispatchQueue.global(qos: .background).async {
                 DispatchQueue.main.async {
                     self.draw(points: faceLandmarkPoints, type: type, size: boundingBox)
@@ -227,28 +229,29 @@ extension ViewController {
     
     func convert(_ points: [CGPoint]) -> [(x: CGFloat, y: CGFloat)] {
         var convertedPoints: [(x: CGFloat, y: CGFloat)] = []
-        for p in points {
-            convertedPoints.append((CGFloat(p.x), CGFloat(p.y)))
-        }
-
+        points.forEach { convertedPoints.append((CGFloat($0.x), CGFloat($0.y))) }
         return convertedPoints
     }
-        
+    
     func draw(points: [(x: CGFloat, y: CGFloat)], type: String, size: CGRect) {
-//        let newLayer = CAShapeLayer()
-//        newLayer.strokeColor = UIColor.red.cgColor
-//        newLayer.lineWidth = 12.0
-//
-//        let path = UIBezierPath()
-//        path.move(to: CGPoint(x: points[0].x, y: points[0].y))
-//        for i in 0..<points.count - 1 {
-//            let point = CGPoint(x: points[i].x, y: points[i].y)
-//            path.addLine(to: point)
-//            path.move(to: point)
-//        }
-//        path.addLine(to: CGPoint(x: points[0].x, y: points[0].y))
-//        newLayer.path = path.cgPath
-
+        
+        /*
+         let newLayer = CAShapeLayer()
+         newLayer.strokeColor = UIColor.red.cgColor
+         newLayer.lineWidth = 12.0
+         
+         let path = UIBezierPath()
+         path.move(to: CGPoint(x: points[0].x, y: points[0].y))
+         for i in 0..<points.count - 1 {
+         let point = CGPoint(x: points[i].x, y: points[i].y)
+         path.addLine(to: point)
+         path.move(to: point)
+         }
+         path.addLine(to: CGPoint(x: points[0].x, y: points[0].y))
+         newLayer.path = path.cgPath
+         */
+        
+        
         if type == "nose" {
             let noseImage = #imageLiteral(resourceName: "nose")
             let filter = CIFilter(name: "CISepiaTone")
@@ -265,7 +268,7 @@ extension ViewController {
             noseLayer.transform = CATransform3DMakeScale(-x, -x, -1)
             
             noseLayer.contents = cgImage
-            noseLayer.contentsGravity = kCAGravityCenter
+            noseLayer.contentsGravity = .center
             noseLayer.isGeometryFlipped = true
         }
         
@@ -285,7 +288,7 @@ extension ViewController {
             leftEarLayer.transform = CATransform3DMakeScale(-x, -x, -1)
             
             leftEarLayer.contents = cgImage
-            leftEarLayer.contentsGravity = kCAGravityCenter
+            leftEarLayer.contentsGravity = .center
             leftEarLayer.isGeometryFlipped = true
         }
         
@@ -297,7 +300,6 @@ extension ViewController {
             let ctx = CIContext(options:nil)
             let cgImage = ctx.createCGImage(filter!.outputImage!, from: filter!.outputImage!.extent)
             
-            
             let ratio = size.width
             let x:CGFloat = ratio / 375
             let h = size.height / 2
@@ -305,12 +307,11 @@ extension ViewController {
             rightEarLayer.transform = CATransform3DMakeScale(-x, -x, -1)
             
             rightEarLayer.contents = cgImage
-            rightEarLayer.contentsGravity = kCAGravityCenter
+            rightEarLayer.contentsGravity = .center
             rightEarLayer.isGeometryFlipped = true
         }
-        ///*CALayer Bat
         
- 
+        //*CALayer Bat
         //shapeLayer.addSublayer(newLayer)
     }
 }
